@@ -9,11 +9,9 @@ use App\Models\User;
 class FileTransfer extends Model
 {
     protected $fillable = [
-        'file_record_id',
-        'from_user_id',
-        'to_user_id',
-        'from_department_id',
-        'to_department_id',
+        'file_id',
+        'sender_id',
+        'receiver_id',
         'remarks',
     ];
 
@@ -41,5 +39,4 @@ class FileTransfer extends Model
     {
         return $this->belongsTo(Department::class, 'to_department_id');
     }
-
 }

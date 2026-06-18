@@ -52,6 +52,9 @@
         <x-nav-link :href="route('admin.files')">
             Department Files
         </x-nav-link>
+        <x-nav-link :href="route('designations.index')">
+            Designations
+        </x-nav-link>
 
         <x-nav-link :href="route('admin.transfer.requests')">
             Transfer Requests
@@ -125,6 +128,10 @@
 
         <x-responsive-nav-link :href="route('admin.users.index')">
             Users
+        </x-responsive-nav-link>
+
+        <x-responsive-nav-link :href="route('designations.index')">
+            Designations
         </x-responsive-nav-link>
 
         <x-responsive-nav-link :href="route('admin.files')">

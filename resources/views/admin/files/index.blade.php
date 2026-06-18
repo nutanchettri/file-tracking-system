@@ -18,7 +18,7 @@
             <th>File Number</th>
             <th>Remarks</th>
         </tr>
-        
+
         @foreach($files as $file)
         <tr>
             <td>{{ $file->id }}</td>
@@ -28,7 +28,7 @@
 
             <!-- Timeline link -->
             <td>
-                <a href="{{ route('admin.files.timeline', $file->id) }}">
+                <a href="{{ route('admin.files.show', $file->id) }}">
                     View Timeline
                 </a>
             </td>

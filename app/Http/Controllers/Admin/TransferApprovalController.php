@@ -120,32 +120,32 @@ class TransferApprovalController extends Controller
     // }
 
 
-
     public function approve($id)
     {
         $request = TransferRequest::findOrFail($id);
-
         $file = FileRecord::findOrFail($request->file_id);
 
         $fromUser = $file->current_user_id;
         $fromDept = $file->department_id;
 
+        // update file
         $file->update([
-            'current_user_id' => $request->target_user,
+            'current_user_id' => $request->to_user_id,
             'department_id' => $request->to_department,
-            'current_holder' => $request->target_user
         ]);
 
+        // update request
         $request->update(['status' => 'approved']);
 
+        // ✅ ADD TIMELINE ENTRY (THIS IS KEY)
         FileMovement::create([
-            'file_id' => $request->file_id,
+            'file_id' => $file->id,
             'from_user' => $fromUser,
-            'to_user' => $request->target_user,
+            'to_user' => $request->to_user_id,
             'from_department' => $fromDept,
             'to_department' => $request->to_department,
-            'action' => 'approved', // ✅ FIXED
-            'remarks' => 'Request approved'
+            'action' => 'approved',
+            'remarks' => 'File transferred on approval'
         ]);
 
         return response()->json([
@@ -153,28 +153,42 @@ class TransferApprovalController extends Controller
             'message' => 'Approved successfully'
         ]);
     }
+
     public function reject($id)
     {
         $request = TransferRequest::findOrFail($id);
-
         $file = FileRecord::findOrFail($request->file_id);
-
-        FileMovement::create([
-            'file_id' => $file->id,
-            'from_user' => null,
-            'to_user' => $file->created_by,
-            'from_department' => null,
-            'to_department' => $file->department_id,
-            'action' => 'created',
-            'remarks' => 'File created'
-        ]);
 
         $request->update(['status' => 'rejected']);
 
+        FileMovement::create([
+            'file_id' => $file->id,
+            'from_user' => $file->current_user_id,
+            'to_user' => null,
+            'from_department' => $file->department_id,
+            'to_department' => $request->to_department,
+            'action' => 'rejected',
+            'remarks' => 'Transfer rejected'
+        ]);
+
         return response()->json([
             'success' => true,
-            'message' => 'Request rejected',
-            'id' => $request->id
+            'message' => 'Rejected successfully'
         ]);
+    }
+
+
+    public function fileDetails($id)
+    {
+        $file = FileRecord::with([
+            'currentUser',
+            'department',
+            'movements.fromUser',
+            'movements.toUser',
+            'movements.fromDept',
+            'movements.toDept'
+        ])->findOrFail($id);
+
+        return view('admin.files.show', compact('file'));
     }
 }

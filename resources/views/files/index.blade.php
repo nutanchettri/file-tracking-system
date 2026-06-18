@@ -4,38 +4,37 @@
 
 <div class="container">
 
-    <h2>Files</h2>
+    <h2>Department Files</h2>
 
-    <a href="{{ route('files.create') }}"
-        class="btn btn-primary mb-3">
-        + Create File
-    </a>
-
-    <table class="table">
+    <table border="1" cellpadding="10">
 
         <tr>
             <th>ID</th>
             <th>File Name</th>
             <th>File Number</th>
-            <th>Department</th>
-            <th>Action</th>
+            <th>Remarks</th>
+            <th>Actions</th>
         </tr>
 
         @foreach($files as $file)
-
         <tr>
             <td>{{ $file->id }}</td>
             <td>{{ $file->file_name }}</td>
             <td>{{ $file->file_number }}</td>
-            <td>{{ $file->department->name ?? 'N/A' }}</td>
+            <td>{{ $file->remarks }}</td>
+
             <td>
-                <a href="{{ route('files.transfer.create', $file->id) }}"
-                    class="btn btn-primary">
-                    Send File
+                <a href="{{ route('files.transfer.create', $file->id) }}">
+                    Transfer
+                </a>
+            </td>
+
+            <td>
+                <a href="{{ route('admin.files.timeline', $file->id) }}">
+                    Timeline
                 </a>
             </td>
         </tr>
-
         @endforeach
 
     </table>

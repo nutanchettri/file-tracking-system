@@ -27,18 +27,6 @@ class FileRecord extends Model
     }
 
 
-    public function department()
-    {
-        return $this->belongsTo(Department::class);
-    }
-
-   
-    public function currentUser()
-    {
-        return $this->belongsTo(User::class, 'current_user_id');
-    }
-
-    
 
 
     public function transfers()
@@ -54,5 +42,22 @@ class FileRecord extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+
+
+    public function movements()
+    {
+        return $this->hasMany(FileMovement::class, 'file_id');
+    }
+
+    public function currentUser()
+    {
+        return $this->belongsTo(User::class, 'current_user_id');
+    }
+
+    public function department()
+    {
+        return $this->belongsTo(Department::class, 'department_id');
     }
 }

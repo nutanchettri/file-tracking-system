@@ -10,7 +10,10 @@ class FileTimelineController extends Controller
 {
     public function show($id)
     {
-        $file = FileRecord::with(['creator', 'currentHolder'])->findOrFail($id);
+        $file = FileRecord::with([
+            'currentUser',
+            'department',
+        ])->findOrFail($id);
 
         $timeline = FileMovement::with([
             'fromUser',
@@ -19,9 +22,22 @@ class FileTimelineController extends Controller
             'toDept'
         ])
             ->where('file_id', $id)
-            ->orderBy('created_at', 'asc')
+            ->orderBy('created_at', 'desc')
             ->get();
 
-        return view('admin.files.timeline', compact('file', 'timeline'));
+        return view('admin.files.show', compact('file', 'timeline'));
+    }
+    public function fileDetails($id)
+    {
+        $file = FileRecord::with([
+            'currentUser',
+            'department',
+            'movements.fromUser',
+            'movements.toUser',
+            'movements.fromDept',
+            'movements.toDept'
+        ])->findOrFail($id);
+
+        return view('admin.files.show', compact('file'));
     }
 }

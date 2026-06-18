@@ -75,6 +75,9 @@ Route::prefix('admin')
         Route::get('/files/{id}/timeline', [FileTimelineController::class, 'show'])
             ->name('files.timeline');
 
+        Route::get('/files/{id}', [FileTimelineController::class, 'fileDetails'])
+            ->name('files.show');
+
         // ✅ TRANSFER REQUESTS
         Route::get('/transfer-requests', [TransferApprovalController::class, 'index'])
             ->name('transfer.requests');
