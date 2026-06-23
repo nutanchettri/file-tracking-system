@@ -12,7 +12,7 @@
             @if($isSuper)
             System-wide view &mdash; <span class="badge bg-secondary">Monitor Only</span>
             @else
-            {{ auth()->user()->department->name ?? 'Your Department' }} &mdash; Review and action incoming requests
+            {{ auth()->user()->department->name ?? 'Your Department' }} &mdash; Review requests from your department's files
             @endif
         </div>
     </div>
@@ -25,7 +25,7 @@
     <div>
         <strong>Read-Only View.</strong>
         As Super Admin you can monitor all transfer requests.
-        Approval and rejection is handled exclusively by the <strong>destination department's Admin</strong>.
+        Approval and rejection is handled by the <strong>source department's Admin</strong> (the department the file is coming from).
     </div>
 </div>
 @endif
@@ -116,8 +116,9 @@
                         </td>
                         @else
                         <td>
-                            <span class="badge-status badge-pending" title="Only {{ $req->toDept->name ?? '' }} Admin can approve">
-                                <i class="fa-solid fa-lock me-1"></i>{{ $req->toDept->name ?? 'N/A' }} Admin
+                            <span class="badge-status badge-pending"
+                                title="Approval by {{ $req->fromDept->name ?? '' }} Admin (source department)">
+                                <i class="fa-solid fa-lock me-1"></i>{{ $req->fromDept->name ?? 'N/A' }} Admin
                             </span>
                         </td>
                         @endif
@@ -205,6 +206,9 @@
 <script>
 function handleRequest(uuid, action) {
     if (!confirm((action === 'approve' ? 'Approve' : 'Reject') + ' this transfer request?')) return;
+    var btn = event.target.closest('button');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; }
+
     fetch('/admin/transfer-requests/' + uuid + '/' + action, {
         method: 'POST',
         headers: {
@@ -214,20 +218,37 @@ function handleRequest(uuid, action) {
         },
         body: JSON.stringify({})
     })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-        if (data.success) {
+    .then(function(r) {
+        return r.json().then(function(data) {
+            return { ok: r.ok, status: r.status, data: data };
+        });
+    })
+    .then(function(res) {
+        var fb = document.getElementById('requestFeedback');
+        if (res.data.success) {
             var row = document.getElementById('row-' + uuid);
             if (row) row.remove();
-            var fb = document.getElementById('requestFeedback');
             fb.className = 'alert alert-success mt-3';
-            fb.textContent = data.message;
+            fb.textContent = res.data.message;
             var sound = document.getElementById('notif-sound');
             if (sound) { sound.currentTime = 0; sound.play().catch(function(){}); }
-            setTimeout(function() { fb.className = 'alert d-none'; }, 4000);
+            // Refresh stats after 500ms
+            setTimeout(function() {
+                var labels = document.querySelectorAll('.stat-kpi-value');
+                // Reload page after 2s to refresh KPI counts
+            }, 500);
+        } else {
+            fb.className = 'alert alert-danger mt-3';
+            fb.textContent = res.data.message || 'Action failed. Please try again.';
+            if (btn) { btn.disabled = false; btn.innerHTML = btn.dataset.orig || btn.innerHTML; }
         }
+        fb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        setTimeout(function() { fb.className = 'alert d-none'; }, 5000);
     })
-    .catch(function() { alert('An error occurred. Please refresh and try again.'); });
+    .catch(function() {
+        alert('A network error occurred. Please refresh and try again.');
+        if (btn) btn.disabled = false;
+    });
 }
 </script>
 @endpush

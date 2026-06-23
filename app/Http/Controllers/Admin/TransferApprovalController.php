@@ -3,15 +3,24 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\TransferRequest;
 use App\Models\FileMovement;
 use App\Models\FileRecord;
 use App\Models\FileTransfer;
-use Illuminate\Support\Facades\Auth;
+use App\Models\TransferRequest;
 use App\Models\User;
+use App\Notifications\FileTransferredNotification;
+use App\Notifications\TransferStatusNotification;
+use App\Services\DashboardService;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class TransferApprovalController extends Controller
 {
+    /**
+     * List transfer requests.
+     * SRS FR8: Admin sees requests where THEIR department is the SOURCE (from_department).
+     * Super Admin sees all (read-only).
+     */
     public function index()
     {
         $user    = Auth::user();
@@ -20,7 +29,8 @@ class TransferApprovalController extends Controller
         $query = TransferRequest::with(['file', 'sender', 'receiver', 'fromDept', 'toDept'])->latest();
 
         if (!$isSuper) {
-            $query->where('to_department', $user->department_id);
+            // SOURCE department admin sees requests initiated by their department
+            $query->where('from_department', $user->department_id);
         }
 
         $pending  = (clone $query)->where('status', 'pending')->get();
@@ -31,102 +41,152 @@ class TransferApprovalController extends Controller
     }
 
     /**
-     * Approve — accepts UUID, enforced by role:admin middleware.
+     * Approve a cross-department transfer request.
+     * Only the SOURCE department admin can approve (SRS FR8).
      */
     public function approve(string $uuid)
     {
         $transferReq = TransferRequest::where('uuid', $uuid)->firstOrFail();
         $admin       = Auth::user();
 
-        if ((int) $transferReq->to_department !== (int) $admin->department_id) {
-            abort(403, 'You can only approve transfers destined for your department.');
+        // SOURCE admin check (not destination)
+        if ((int) $transferReq->from_department !== (int) $admin->department_id) {
+            abort(403, 'Only the source department admin can approve this transfer.');
+        }
+
+        if ($transferReq->status !== 'pending') {
+            return response()->json(['success' => false, 'message' => 'This request is no longer pending.'], 422);
         }
 
         $file       = FileRecord::findOrFail($transferReq->file_id);
         $targetUser = User::findOrFail($transferReq->target_user);
+        $requester  = User::findOrFail($transferReq->requested_by);
         $fromUser   = $file->current_user_id;
         $fromDept   = $file->department_id;
 
-        FileTransfer::create([
-            'file_record_id'     => $file->id,
-            'from_user_id'       => $transferReq->requested_by,
-            'to_user_id'         => $transferReq->target_user,
-            'from_department_id' => $transferReq->from_department,
-            'to_department_id'   => $transferReq->to_department,
-            'remarks'            => 'Approved by ' . $admin->name,
+        DB::transaction(function () use ($transferReq, $file, $targetUser, $requester, $admin, $fromUser, $fromDept) {
+
+            // 1. Create transfer record
+            $transfer = FileTransfer::create([
+                'file_record_id'     => $file->id,
+                'from_user_id'       => $transferReq->requested_by,
+                'to_user_id'         => $transferReq->target_user,
+                'from_department_id' => $transferReq->from_department,
+                'to_department_id'   => $transferReq->to_department,
+                'remarks'            => 'Approved by ' . $admin->name,
+            ]);
+
+            // 2. Record movement in timeline
+            FileMovement::create([
+                'file_id'         => $file->id,
+                'from_user'       => $fromUser,
+                'to_user'         => $targetUser->id,
+                'from_department' => $fromDept,
+                'to_department'   => $transferReq->to_department,
+                'action'          => 'approved',
+                'remarks'         => 'Approved by source admin: ' . $admin->name,
+            ]);
+
+            // 3. Update file: move to target user and destination department
+            $file->update([
+                'current_user_id' => $targetUser->id,
+                'department_id'   => $transferReq->to_department,
+                'status'          => 'active',
+            ]);
+
+            // 4. Mark request approved
+            $transferReq->update(['status' => 'approved']);
+
+            // 5. Audit log
+            $this->recordAudit('transfer_approved', $file, [
+                'approved_by'     => $admin->id,
+                'from_user'       => $fromUser,
+                'to_user'         => $targetUser->id,
+                'from_department' => $fromDept,
+                'to_department'   => $transferReq->to_department,
+                'ip'              => request()->ip(),
+            ], 'Transfer approved by ' . $admin->name);
+
+            // 6. Notify the target user (file receiver)
+            $targetUser->notify(new FileTransferredNotification($transfer));
+
+            // 7. Notify the requester that their request was approved
+            $requester->notify(new TransferStatusNotification($transferReq, 'approved', $admin->name));
+        });
+
+        // Invalidate all relevant caches
+        DashboardService::clearAdminCache($admin->department_id);
+        DashboardService::clearAdminCache((int) $transferReq->to_department);
+        DashboardService::clearSuperAdminCache();
+        DashboardService::clearUserCache($targetUser->id);
+        DashboardService::clearUserCache($requester->id);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Transfer approved. File moved to ' . $targetUser->name . '.',
         ]);
-
-        FileMovement::create([
-            'file_id'         => $file->id,
-            'from_user'       => $fromUser,
-            'to_user'         => $targetUser->id,
-            'from_department' => $fromDept,
-            'to_department'   => $transferReq->to_department,
-            'action'          => 'approved',
-            'remarks'         => 'Transfer approved by: ' . $admin->name,
-        ]);
-
-        $file->update([
-            'current_user_id' => $transferReq->target_user,
-            'department_id'   => $transferReq->to_department,
-            'status'          => 'active',
-        ]);
-
-        $transferReq->update(['status' => 'approved']);
-
-        // Invalidate caches
-        \App\Services\DashboardService::clearAdminCache($admin->department_id);
-        \App\Services\DashboardService::clearSuperAdminCache();
-
-        $this->recordAudit('approved', $file, [
-            'approved_by'     => $admin->id,
-            'from_user'       => $fromUser,
-            'to_user'         => $transferReq->target_user,
-            'from_department' => $fromDept,
-            'to_department'   => $transferReq->to_department,
-        ], 'Transfer approved by ' . $admin->name);
-
-        return response()->json(['success' => true, 'message' => 'Transfer approved successfully.']);
     }
 
     /**
-     * Reject — accepts UUID, enforced by role:admin middleware.
+     * Reject a cross-department transfer request.
+     * Only the SOURCE department admin can reject (SRS FR8).
      */
     public function reject(string $uuid)
     {
         $transferReq = TransferRequest::where('uuid', $uuid)->firstOrFail();
         $admin       = Auth::user();
 
-        if ((int) $transferReq->to_department !== (int) $admin->department_id) {
-            abort(403, 'You can only reject transfers destined for your department.');
+        // SOURCE admin check
+        if ((int) $transferReq->from_department !== (int) $admin->department_id) {
+            abort(403, 'Only the source department admin can reject this transfer.');
         }
 
-        $file = FileRecord::findOrFail($transferReq->file_id);
+        if ($transferReq->status !== 'pending') {
+            return response()->json(['success' => false, 'message' => 'This request is no longer pending.'], 422);
+        }
 
-        $transferReq->update(['status' => 'rejected']);
+        $file      = FileRecord::findOrFail($transferReq->file_id);
+        $requester = User::findOrFail($transferReq->requested_by);
 
-        FileMovement::create([
-            'file_id'         => $file->id,
-            'from_user'       => $file->current_user_id,
-            'to_user'         => null,
-            'from_department' => $file->department_id,
-            'to_department'   => $transferReq->to_department,
-            'action'          => 'rejected',
-            'remarks'         => 'Transfer rejected by: ' . $admin->name,
-        ]);
+        DB::transaction(function () use ($transferReq, $file, $requester, $admin) {
 
-        $file->update(['status' => 'active']);
+            // 1. Mark rejected
+            $transferReq->update(['status' => 'rejected']);
+
+            // 2. Revert file status to active (file stays with current holder)
+            $file->update(['status' => 'active']);
+
+            // 3. Record rejection in timeline
+            FileMovement::create([
+                'file_id'         => $file->id,
+                'from_user'       => $file->current_user_id,
+                'to_user'         => $transferReq->target_user,
+                'from_department' => $file->department_id,
+                'to_department'   => $transferReq->to_department,
+                'action'          => 'rejected',
+                'remarks'         => 'Transfer rejected by source admin: ' . $admin->name,
+            ]);
+
+            // 4. Audit log
+            $this->recordAudit('transfer_rejected', $file, [
+                'rejected_by'     => $admin->id,
+                'from_department' => $file->department_id,
+                'to_department'   => $transferReq->to_department,
+                'ip'              => request()->ip(),
+            ], 'Transfer rejected by ' . $admin->name);
+
+            // 5. Notify the requester that their request was rejected
+            $requester->notify(new TransferStatusNotification($transferReq, 'rejected', $admin->name));
+        });
 
         // Invalidate caches
-        \App\Services\DashboardService::clearAdminCache($admin->department_id);
-        \App\Services\DashboardService::clearSuperAdminCache();
+        DashboardService::clearAdminCache($admin->department_id);
+        DashboardService::clearSuperAdminCache();
+        DashboardService::clearUserCache($requester->id);
 
-        $this->recordAudit('rejected', $file, [
-            'rejected_by'     => $admin->id,
-            'from_department' => $file->department_id,
-            'to_department'   => $transferReq->to_department,
-        ], 'Transfer rejected by ' . $admin->name);
-
-        return response()->json(['success' => true, 'message' => 'Transfer rejected.']);
+        return response()->json([
+            'success' => true,
+            'message' => 'Transfer request rejected.',
+        ]);
     }
 }

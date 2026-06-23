@@ -207,17 +207,25 @@ function dashAction(uuid, action) {
         headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({})
     })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-        if (data.success) {
+    .then(function(r) {
+        return r.json().then(function(data) { return { ok: r.ok, data: data }; });
+    })
+    .then(function(res) {
+        var fb = document.getElementById('dashFeedback');
+        if (res.data.success) {
             var row = document.getElementById('dash-row-' + uuid);
             if (row) row.remove();
-            var fb = document.getElementById('dashFeedback');
             fb.className = 'alert alert-success mt-3';
-            fb.textContent = data.message;
-            setTimeout(function() { fb.className = 'alert d-none'; }, 4000);
+            fb.textContent = res.data.message;
+            // Refresh KPI counts after 1.5s by reloading
+            setTimeout(function() { window.location.reload(); }, 1500);
+        } else {
+            fb.className = 'alert alert-danger mt-3';
+            fb.textContent = res.data.message || 'Action failed.';
         }
-    });
+        setTimeout(function() { fb.className = 'alert d-none'; }, 5000);
+    })
+    .catch(function() { alert('Network error. Please refresh.'); });
 }
 </script>
 @endpush
