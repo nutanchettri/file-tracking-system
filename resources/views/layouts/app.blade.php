@@ -30,10 +30,10 @@
     $pendingCount = 0;
     if ($isAdmin) {
     $pendingCount = \Illuminate\Support\Facades\Cache::remember(
-    "pending_transfers_{$deptId}",
+    "pending_from_{$deptId}",
     60, // 1 minute cache
     fn() => \App\Models\TransferRequest::where('status', 'pending')
-    ->where('to_department', $deptId)->count()
+    ->where('from_department', $deptId)->count()
     );
     }
 
@@ -412,3 +412,4 @@
 </body>
 
 </html>
+
