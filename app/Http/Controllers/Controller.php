@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 
 abstract class Controller
 {
+    use AuthorizesRequests;
+
     protected function recordAudit(string $action, $auditable, array $metadata = [], ?string $description = null)
     {
         AuditLog::create([

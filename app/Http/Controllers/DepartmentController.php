@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Models\Department;
 
 class DepartmentController extends Controller
@@ -15,7 +16,7 @@ class DepartmentController extends Controller
             $search = $request->string('search')->trim()->value();
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%");
+                    ->orWhere('code', 'like', "%{$search}%");
             });
         }
 
@@ -77,14 +78,20 @@ class DepartmentController extends Controller
 
     public function destroy(Department $department)
     {
-        // Prevent deleting if users are assigned
-        if ($department->users()->count() > 0) {
-            return back()->with('error', 'Cannot delete a department that has users assigned to it.');
+        DB::beginTransaction();
+
+        try {
+            $department->designations()->delete();
+            $department->users()->delete();
+            $department->delete();
+
+            DB::commit();
+
+            return redirect()->route('departments.index')
+                ->with('success', 'Department and related users/designations deleted successfully.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->with('error', 'Department deletion failed: ' . $e->getMessage());
         }
-
-        $department->delete();
-
-        return redirect()->route('departments.index')
-            ->with('success', 'Department deleted successfully.');
     }
 }

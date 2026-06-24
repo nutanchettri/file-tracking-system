@@ -13,9 +13,13 @@
             &mdash; {{ auth()->user()->designation->name ?? '' }}
         </div>
     </div>
+    @can('create', App\Models\FileRecord::class)
     <a href="{{ route('files.create') }}" class="btn-portal-primary">
         <i class="fa-solid fa-plus me-1"></i>New File
     </a>
+    @else
+    <span class="badge-status badge-pending">File creation permission not granted</span>
+    @endcan
 </div>
 
 {{-- KPI ROW --}}
@@ -23,25 +27,37 @@
     <div class="col-6 col-md-3">
         <div class="stat-kpi">
             <div class="stat-kpi-icon green"><i class="fa-solid fa-file-lines"></i></div>
-            <div><div class="stat-kpi-label">My Files</div><div class="stat-kpi-value">{{ $totalMyFiles }}</div></div>
+            <div>
+                <div class="stat-kpi-label">My Files</div>
+                <div class="stat-kpi-value">{{ $totalMyFiles }}</div>
+            </div>
         </div>
     </div>
     <div class="col-6 col-md-3">
         <div class="stat-kpi">
             <div class="stat-kpi-icon blue"><i class="fa-solid fa-paper-plane"></i></div>
-            <div><div class="stat-kpi-label">Sent Files</div><div class="stat-kpi-value">{{ $sentFiles }}</div></div>
+            <div>
+                <div class="stat-kpi-label">Sent Files</div>
+                <div class="stat-kpi-value">{{ $sentFiles }}</div>
+            </div>
         </div>
     </div>
     <div class="col-6 col-md-3">
         <div class="stat-kpi">
             <div class="stat-kpi-icon teal"><i class="fa-solid fa-inbox"></i></div>
-            <div><div class="stat-kpi-label">Received Files</div><div class="stat-kpi-value">{{ $receivedFiles }}</div></div>
+            <div>
+                <div class="stat-kpi-label">Received Files</div>
+                <div class="stat-kpi-value">{{ $receivedFiles }}</div>
+            </div>
         </div>
     </div>
     <div class="col-6 col-md-3">
         <div class="stat-kpi">
             <div class="stat-kpi-icon orange"><i class="fa-solid fa-clock"></i></div>
-            <div><div class="stat-kpi-label">Pending Transfers</div><div class="stat-kpi-value">{{ $pendingTransfers }}</div></div>
+            <div>
+                <div class="stat-kpi-label">Pending Transfers</div>
+                <div class="stat-kpi-value">{{ $pendingTransfers }}</div>
+            </div>
         </div>
     </div>
 </div>
@@ -58,27 +74,37 @@
                 <div class="table-responsive">
                     <table class="portal-table">
                         <thead>
-                            <tr><th>File Number</th><th>File Name</th><th>Status</th><th>Date</th><th></th></tr>
+                            <tr>
+                                <th>File Number</th>
+                                <th>File Name</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th></th>
+                            </tr>
                         </thead>
                         <tbody>
-                        @forelse($myFiles as $file)
-                        <tr>
-                            <td class="text-muted fs-sm fw-700">{{ $file->file_number }}</td>
-                            <td>{{ $file->file_name }}</td>
-                            <td>@include('partials.status-badge', ['status' => $file->status])</td>
-                            <td class="text-muted fs-sm">{{ $file->created_at->format('d M Y') }}</td>
-                            <td>
-                                <div class="d-flex gap-1">
-                                    <a href="{{ route('files.show', $file->uuid) }}" class="btn btn-sm btn-outline-primary" title="View"><i class="fa-solid fa-eye"></i></a>
-                                    @if($file->status !== 'archived')
-                                    <a href="{{ route('files.transfer.create', $file->uuid) }}" class="btn btn-sm btn-outline-secondary" title="Transfer"><i class="fa-solid fa-right-left"></i></a>
-                                    @endif
-                                </div>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr><td colspan="5"><div class="empty-state"><i class="fa-solid fa-file-circle-question"></i>No files yet. <a href="{{ route('files.create') }}">Create one</a>.</div></td></tr>
-                        @endforelse
+                            @forelse($myFiles as $file)
+                            <tr>
+                                <td class="text-muted fs-sm fw-700">{{ $file->file_number }}</td>
+                                <td>{{ $file->file_name }}</td>
+                                <td>@include('partials.status-badge', ['status' => $file->status])</td>
+                                <td class="text-muted fs-sm">{{ $file->created_at->format('d M Y') }}</td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        <a href="{{ route('files.show', $file->uuid) }}" class="btn btn-sm btn-outline-primary" title="View"><i class="fa-solid fa-eye"></i></a>
+                                        @if($file->status !== 'archived')
+                                        <a href="{{ route('files.transfer.create', $file->uuid) }}" class="btn btn-sm btn-outline-secondary" title="Transfer"><i class="fa-solid fa-right-left"></i></a>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="5">
+                                    <div class="empty-state"><i class="fa-solid fa-file-circle-question"></i>No files yet. <a href="{{ route('files.create') }}">Create one</a>.</div>
+                                </td>
+                            </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>

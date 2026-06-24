@@ -16,9 +16,17 @@
 </div>
 
 <div class="portal-form-card">
-    <form method="POST" action="{{ route('users.update', $user->uuid) }}" class="portal-form">
+    <form method="POST" action="{{ route('users.update', $user->uuid) }}" enctype="multipart/form-data" class="portal-form">
         @csrf @method('PUT')
         <div class="row g-3">
+            <div class="col-12">
+                @if($user->photo_url)
+                <div class="mb-3 d-flex align-items-center gap-3">
+                    <img src="{{ $user->photo_url }}" alt="{{ $user->name }}" class="rounded-circle" style="width:72px;height:72px;object-fit:cover;">
+                    <div class="text-muted">Current profile photo for {{ $user->name }}</div>
+                </div>
+                @endif
+            </div>
             <div class="col-md-6">
                 <label class="form-label">Full Name <span class="required-star">*</span></label>
                 <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"
@@ -43,8 +51,8 @@
                 <label class="form-label">Role</label>
                 <select name="role" class="form-select">
                     <option value="super_admin" {{ $user->role === 'super_admin' ? 'selected' : '' }}>Super Admin</option>
-                    <option value="admin"       {{ $user->role === 'admin'       ? 'selected' : '' }}>Admin</option>
-                    <option value="user"        {{ $user->role === 'user'        ? 'selected' : '' }}>User</option>
+                    <option value="admin" {{ $user->role === 'admin'       ? 'selected' : '' }}>Admin</option>
+                    <option value="user" {{ $user->role === 'user'        ? 'selected' : '' }}>User</option>
                 </select>
             </div>
             <div class="col-md-6">
@@ -58,10 +66,11 @@
             </div>
             <div class="col-md-6">
                 <label class="form-label">Designation</label>
-                <select name="designation_id" class="form-select">
+                <select name="designation_id" class="form-select" id="designationSelect">
                     <option value="">None</option>
                     @foreach($designations as $des)
-                    <option value="{{ $des->id }}" {{ $user->designation_id == $des->id ? 'selected' : '' }}>{{ $des->name }}</option>
+                    <option value="{{ $des->id }}" data-department-id="{{ $des->department_id }}"
+                        {{ $user->designation_id == $des->id ? 'selected' : '' }}>{{ $des->name }}</option>
                     @endforeach
                 </select>
             </div>
@@ -77,3 +86,40 @@
     </form>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var departmentSelect = document.querySelector('select[name="department_id"]');
+        var designationSelect = document.getElementById('designationSelect');
+
+        function syncDesignations() {
+            if (!departmentSelect || !designationSelect) {
+                return;
+            }
+            var departmentId = departmentSelect.value;
+            Array.from(designationSelect.options).forEach(function(opt) {
+                var isDefault = opt.value === '';
+                if (isDefault) {
+                    opt.hidden = false;
+                    return;
+                }
+                var optionDept = opt.dataset.departmentId;
+                opt.hidden = departmentId && optionDept !== departmentId;
+            });
+
+            if (designationSelect.selectedOptions.length > 0) {
+                var selected = designationSelect.selectedOptions[0];
+                if (selected.hidden) {
+                    designationSelect.value = '';
+                }
+            }
+        }
+
+        if (departmentSelect && designationSelect) {
+            departmentSelect.addEventListener('change', syncDesignations);
+            syncDesignations();
+        }
+    });
+</script>
+@endpush

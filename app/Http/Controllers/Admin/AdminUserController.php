@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Designation;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class AdminUserController extends Controller
@@ -15,13 +17,13 @@ class AdminUserController extends Controller
     private function resolveUser(string $uuid): User
     {
         return User::where('uuid', $uuid)
-            ->where('department_id', auth()->user()->department_id)
+            ->where('department_id', Auth::user()->department_id)
             ->firstOrFail();
     }
 
     public function index()
     {
-        $users = User::where('department_id', auth()->user()->department_id)
+        $users = User::where('department_id', Auth::user()->department_id)
             ->where('role', 'user')
             ->with('designation')
             ->latest()
@@ -32,7 +34,7 @@ class AdminUserController extends Controller
 
     public function create()
     {
-        $designations = Designation::where('department_id', auth()->user()->department_id)->get();
+        $designations = Designation::where('department_id', Auth::user()->department_id)->get();
         return view('admin.users.create', compact('designations'));
     }
 
@@ -43,9 +45,9 @@ class AdminUserController extends Controller
             'email'          => 'required|email:rfc|max:255|unique:users,email',
             'password'       => 'required|min:8',
             'designation_id' => 'required|exists:designations,id',
-            'contact_number' => 'nullable|string|max:20',
+            'contact_number' => ['nullable', 'regex:/^[0-9]{10}$/'],
             'photo'          => 'nullable|file|mimes:jpg,jpeg,png|max:2048',
-            'can_create_file'=> 'nullable|boolean',
+            'can_create_file' => 'nullable|boolean',
         ]);
 
         $data = [
@@ -53,7 +55,7 @@ class AdminUserController extends Controller
             'email'           => $request->email,
             'password'        => Hash::make($request->password),
             'designation_id'  => $request->designation_id,
-            'department_id'   => auth()->user()->department_id,
+            'department_id'   => Auth::user()->department_id,
             'role'            => 'user',
             'contact_number'  => $request->contact_number,
             'can_create_file' => $request->boolean('can_create_file'),
@@ -69,7 +71,7 @@ class AdminUserController extends Controller
             'name'  => $user->name,
             'email' => $user->email,
             'ip'    => $request->ip(),
-        ], 'User created by admin: ' . auth()->user()->name);
+        ], 'User created by admin: ' . Auth::user()->name);
 
         return redirect()->route('admin.users.index')
             ->with('success', 'User created successfully.');
@@ -84,7 +86,7 @@ class AdminUserController extends Controller
     public function edit(string $user)
     {
         $userModel    = $this->resolveUser($user);
-        $designations = Designation::where('department_id', auth()->user()->department_id)->get();
+        $designations = Designation::where('department_id', Auth::user()->department_id)->get();
 
         return view('admin.users.edit', ['user' => $userModel, 'designations' => $designations]);
     }
@@ -94,15 +96,35 @@ class AdminUserController extends Controller
         $userModel = $this->resolveUser($user);
 
         $request->validate([
-            'name'  => 'required|string|max:255',
-            'email' => 'required|email:rfc|max:255|unique:users,email,' . $userModel->id,
+            'name'            => 'required|string|max:255',
+            'email'           => 'required|email:rfc|max:255|unique:users,email,' . $userModel->id,
+            'designation_id'  => 'required|exists:designations,id',
+            'contact_number'  => ['nullable', 'regex:/^[0-9]{10}$/'],
+            'password'        => 'nullable|min:8|confirmed',
+            'photo'           => 'nullable|file|mimes:jpg,jpeg,png|max:2048',
+            'can_create_file' => 'nullable|boolean',
         ]);
 
-        $userModel->update([
+        $data = [
             'name'           => $request->name,
             'email'          => $request->email,
             'designation_id' => $request->designation_id,
-        ]);
+            'contact_number' => $request->contact_number,
+            'can_create_file' => $request->boolean('can_create_file'),
+        ];
+
+        if ($request->filled('password')) {
+            $data['password'] = Hash::make($request->password);
+        }
+
+        if ($request->hasFile('photo')) {
+            if ($userModel->photo && Storage::disk('public')->exists($userModel->photo)) {
+                Storage::disk('public')->delete($userModel->photo);
+            }
+            $data['photo'] = $this->storePhoto($request);
+        }
+
+        $userModel->update($data);
 
         return redirect()->route('admin.users.index')
             ->with('success', 'User updated successfully.');
@@ -112,7 +134,7 @@ class AdminUserController extends Controller
     {
         $userModel = $this->resolveUser($user);
 
-        if ($userModel->id === auth()->id()) {
+        if ($userModel->id === Auth::id()) {
             return back()->with('error', 'You cannot delete your own account.');
         }
 
@@ -120,7 +142,7 @@ class AdminUserController extends Controller
             'name'  => $userModel->name,
             'email' => $userModel->email,
             'ip'    => request()->ip(),
-        ], 'User deleted by admin: ' . auth()->user()->name);
+        ], 'User deleted by admin: ' . Auth::user()->name);
 
         $userModel->delete();
 

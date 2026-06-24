@@ -16,10 +16,18 @@
 </div>
 
 <div class="portal-form-card">
-    <form method="POST" action="{{ route('admin.users.update', $user->uuid) }}" class="portal-form">
+    <form method="POST" action="{{ route('admin.users.update', $user->uuid) }}" enctype="multipart/form-data" class="portal-form">
         @csrf @method('PUT')
 
         <div class="row g-3">
+            @if($user->photo_url)
+            <div class="col-12">
+                <div class="mb-3 d-flex align-items-center gap-3">
+                    <img src="{{ $user->photo_url }}" alt="{{ $user->name }}" class="rounded-circle" style="width:72px;height:72px;object-fit:cover;">
+                    <div class="text-muted">Current profile photo for {{ $user->name }}</div>
+                </div>
+            </div>
+            @endif
             <div class="col-md-6">
                 <label class="form-label">Full Name <span class="required-star">*</span></label>
                 <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"

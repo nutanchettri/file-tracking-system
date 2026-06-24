@@ -45,7 +45,7 @@
                     <option value="">Select Role</option>
                     {{-- Super Admin is system-reserved — never created via UI --}}
                     <option value="admin" {{ old('role') === 'admin' ? 'selected' : '' }}>Admin</option>
-                    <option value="user"  {{ old('role') === 'user'  ? 'selected' : '' }}>User</option>
+                    <option value="user" {{ old('role') === 'user'  ? 'selected' : '' }}>User</option>
                 </select>
                 @error('role')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 <div class="form-text text-muted">
@@ -64,16 +64,22 @@
             </div>
             <div class="col-md-6">
                 <label class="form-label">Designation</label>
-                <select name="designation_id" class="form-select">
+                <select name="designation_id" class="form-select" id="designationSelect">
                     <option value="">Select Designation</option>
                     @foreach($designations as $des)
-                    <option value="{{ $des->id }}" {{ old('designation_id') == $des->id ? 'selected' : '' }}>{{ $des->name }}</option>
+                    <option value="{{ $des->id }}" data-department-id="{{ $des->department_id }}"
+                        {{ old('designation_id') == $des->id ? 'selected' : '' }}>{{ $des->name }}</option>
                     @endforeach
                 </select>
             </div>
             <div class="col-md-6">
                 <label class="form-label">Contact Number</label>
                 <input type="text" name="contact_number" class="form-control" value="{{ old('contact_number') }}">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Profile Photo</label>
+                <input type="file" name="photo" class="form-control @error('photo') is-invalid @enderror" accept="image/jpeg,image/png">
+                @error('photo')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
             <div class="col-12">
                 <div class="form-check">
@@ -89,3 +95,38 @@
     </form>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var departmentSelect = document.querySelector('select[name="department_id"]');
+        var designationSelect = document.getElementById('designationSelect');
+
+        function syncDesignations() {
+            var departmentId = departmentSelect.value;
+            Array.from(designationSelect.options).forEach(function(opt) {
+                var isDefault = opt.value === '';
+                if (isDefault) {
+                    opt.hidden = false;
+                    return;
+                }
+                var optionDept = opt.dataset.departmentId;
+                opt.hidden = departmentId && optionDept !== departmentId;
+            });
+
+            // If current selection is hidden, reset it
+            if (designationSelect.selectedOptions.length > 0) {
+                var selected = designationSelect.selectedOptions[0];
+                if (selected.hidden) {
+                    designationSelect.value = '';
+                }
+            }
+        }
+
+        if (departmentSelect && designationSelect) {
+            departmentSelect.addEventListener('change', syncDesignations);
+            syncDesignations();
+        }
+    });
+</script>
+@endpush

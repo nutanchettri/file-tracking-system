@@ -17,9 +17,13 @@
             <i class="fa-solid fa-right-left me-1"></i>Transfer Requests
             @if($pendingRequests > 0)<span class="badge bg-warning text-dark ms-1">{{ $pendingRequests }}</span>@endif
         </a>
+        @can('create', App\Models\FileRecord::class)
         <a href="{{ route('files.create') }}" class="btn-portal-primary">
             <i class="fa-solid fa-plus me-1"></i>New File
         </a>
+        @else
+        <span class="badge-status badge-pending align-self-center">File creation permission not granted</span>
+        @endcan
     </div>
 </div>
 
@@ -28,25 +32,37 @@
     <div class="col-6 col-md-3">
         <div class="stat-kpi">
             <div class="stat-kpi-icon green"><i class="fa-solid fa-file-lines"></i></div>
-            <div><div class="stat-kpi-label">Dept. Files</div><div class="stat-kpi-value">{{ $deptFiles }}</div></div>
+            <div>
+                <div class="stat-kpi-label">Dept. Files</div>
+                <div class="stat-kpi-value">{{ $deptFiles }}</div>
+            </div>
         </div>
     </div>
     <div class="col-6 col-md-3">
         <div class="stat-kpi">
             <div class="stat-kpi-icon orange"><i class="fa-solid fa-clock"></i></div>
-            <div><div class="stat-kpi-label">Pending Requests</div><div class="stat-kpi-value">{{ $pendingRequests }}</div></div>
+            <div>
+                <div class="stat-kpi-label">Pending Requests</div>
+                <div class="stat-kpi-value">{{ $pendingRequests }}</div>
+            </div>
         </div>
     </div>
     <div class="col-6 col-md-3">
         <div class="stat-kpi">
             <div class="stat-kpi-icon blue"><i class="fa-solid fa-users"></i></div>
-            <div><div class="stat-kpi-label">Users in Dept.</div><div class="stat-kpi-value">{{ $deptUsers }}</div></div>
+            <div>
+                <div class="stat-kpi-label">Users in Dept.</div>
+                <div class="stat-kpi-value">{{ $deptUsers }}</div>
+            </div>
         </div>
     </div>
     <div class="col-6 col-md-3">
         <div class="stat-kpi">
             <div class="stat-kpi-icon teal"><i class="fa-solid fa-check-double"></i></div>
-            <div><div class="stat-kpi-label">Completed Transfers</div><div class="stat-kpi-value">{{ $completedTransfers }}</div></div>
+            <div>
+                <div class="stat-kpi-label">Completed Transfers</div>
+                <div class="stat-kpi-value">{{ $completedTransfers }}</div>
+            </div>
         </div>
     </div>
 </div>
@@ -69,34 +85,44 @@
                 <div class="table-responsive">
                     <table class="portal-table">
                         <thead>
-                            <tr><th>File</th><th>From</th><th>Requested By</th><th>Date</th><th>Action</th></tr>
+                            <tr>
+                                <th>File</th>
+                                <th>From</th>
+                                <th>Requested By</th>
+                                <th>Date</th>
+                                <th>Action</th>
+                            </tr>
                         </thead>
                         <tbody>
-                        @forelse($pendingApprovals as $req)
-                        <tr id="dash-row-{{ $req->uuid }}">
-                            <td>
-                                <div class="fw-700">{{ $req->file->file_name ?? 'N/A' }}</div>
-                                <div class="text-muted fs-sm">{{ $req->file->file_number ?? '' }}</div>
-                            </td>
-                            <td class="text-muted">{{ $req->fromDept->name ?? 'N/A' }}</td>
-                            <td>{{ $req->sender->name ?? 'N/A' }}</td>
-                            <td class="text-muted fs-sm">{{ $req->created_at->format('d M Y') }}</td>
-                            <td>
-                                <div class="d-flex gap-1">
-                                    <button onclick="dashAction('{{ $req->uuid }}', 'approve')"
-                                        class="btn btn-sm btn-success">
-                                        <i class="fa-solid fa-check"></i>
-                                    </button>
-                                    <button onclick="dashAction('{{ $req->uuid }}', 'reject')"
-                                        class="btn btn-sm btn-danger">
-                                        <i class="fa-solid fa-xmark"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr><td colspan="5"><div class="empty-state py-3"><i class="fa-solid fa-check"></i>No pending approvals.</div></td></tr>
-                        @endforelse
+                            @forelse($pendingApprovals as $req)
+                            <tr id="dash-row-{{ $req->uuid }}">
+                                <td>
+                                    <div class="fw-700">{{ $req->file->file_name ?? 'N/A' }}</div>
+                                    <div class="text-muted fs-sm">{{ $req->file->file_number ?? '' }}</div>
+                                </td>
+                                <td class="text-muted">{{ $req->fromDept->name ?? 'N/A' }}</td>
+                                <td>{{ $req->sender->name ?? 'N/A' }}</td>
+                                <td class="text-muted fs-sm">{{ $req->created_at->format('d M Y') }}</td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        <button onclick="dashAction('{{ $req->uuid }}', 'approve', this)"
+                                            class="btn btn-sm btn-success">
+                                            <i class="fa-solid fa-check"></i>
+                                        </button>
+                                        <button onclick="dashAction('{{ $req->uuid }}', 'reject', this)"
+                                            class="btn btn-sm btn-danger">
+                                            <i class="fa-solid fa-xmark"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="5">
+                                    <div class="empty-state py-3"><i class="fa-solid fa-check"></i>No pending approvals.</div>
+                                </td>
+                            </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
@@ -143,19 +169,29 @@
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="portal-table">
-                        <thead><tr><th>File Number</th><th>Name</th><th>Holder</th><th>Status</th><th></th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>File Number</th>
+                                <th>Name</th>
+                                <th>Holder</th>
+                                <th>Status</th>
+                                <th></th>
+                            </tr>
+                        </thead>
                         <tbody>
-                        @forelse($recentFiles as $f)
-                        <tr>
-                            <td class="text-muted fs-sm">{{ $f->file_number }}</td>
-                            <td class="fw-700">{{ $f->file_name }}</td>
-                            <td class="text-muted">{{ $f->currentHolder->name ?? 'N/A' }}</td>
-                            <td>@include('partials.status-badge', ['status' => $f->status])</td>
-                            <td><a href="{{ route('admin.files.timeline', $f->uuid) }}" class="btn btn-sm btn-outline-secondary">Timeline</a></td>
-                        </tr>
-                        @empty
-                        <tr><td colspan="5" class="text-center py-3 text-muted">No files found.</td></tr>
-                        @endforelse
+                            @forelse($recentFiles as $f)
+                            <tr>
+                                <td class="text-muted fs-sm">{{ $f->file_number }}</td>
+                                <td class="fw-700">{{ $f->file_name }}</td>
+                                <td class="text-muted">{{ $f->currentHolder->name ?? 'N/A' }}</td>
+                                <td>@include('partials.status-badge', ['status' => $f->status])</td>
+                                <td><a href="{{ route('admin.files.timeline', $f->uuid) }}" class="btn btn-sm btn-outline-secondary">Timeline</a></td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="5" class="text-center py-3 text-muted">No files found.</td>
+                            </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
@@ -199,34 +235,62 @@
 
 @push('scripts')
 <script>
-function dashAction(uuid, action) {
-    var label = action === 'approve' ? 'Approve' : 'Reject';
-    if (!confirm(label + ' this transfer request?')) return;
-    fetch('/admin/transfer-requests/' + uuid + '/' + action, {
-        method: 'POST',
-        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({})
-    })
-    .then(function(r) {
-        return r.json().then(function(data) { return { ok: r.ok, data: data }; });
-    })
-    .then(function(res) {
-        var fb = document.getElementById('dashFeedback');
-        if (res.data.success) {
-            var row = document.getElementById('dash-row-' + uuid);
-            if (row) row.remove();
-            fb.className = 'alert alert-success mt-3';
-            fb.textContent = res.data.message;
-            // Refresh KPI counts after 1.5s by reloading
-            setTimeout(function() { window.location.reload(); }, 1500);
-        } else {
-            fb.className = 'alert alert-danger mt-3';
-            fb.textContent = res.data.message || 'Action failed.';
+    function dashAction(uuid, action, btn) {
+        var label = action === 'approve' ? 'Approve' : 'Reject';
+        if (!confirm(label + ' this transfer request?')) return;
+        var originalHtml = btn ? btn.innerHTML : null;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         }
-        setTimeout(function() { fb.className = 'alert d-none'; }, 5000);
-    })
-    .catch(function() { alert('Network error. Please refresh.'); });
-}
+
+        fetch('/admin/transfer-requests/' + uuid + '/' + action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({})
+            })
+            .then(function(r) {
+                return r.json().then(function(data) {
+                    return {
+                        ok: r.ok,
+                        data: data
+                    };
+                });
+            })
+            .then(function(res) {
+                var fb = document.getElementById('dashFeedback');
+                if (res.data.success) {
+                    var row = document.getElementById('dash-row-' + uuid);
+                    if (row) row.remove();
+                    fb.className = 'alert alert-success mt-3';
+                    fb.textContent = res.data.message;
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    fb.className = 'alert alert-danger mt-3';
+                    fb.textContent = res.data.message || 'Action failed.';
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtml;
+                    }
+                }
+                setTimeout(function() {
+                    fb.className = 'alert d-none';
+                }, 5000);
+            })
+            .catch(function() {
+                alert('Network error. Please refresh.');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                }
+            });
+    }
 </script>
 @endpush
 @endsection

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -12,10 +13,30 @@ use App\Models\Designation;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::with(['department', 'designation'])->latest()->paginate(15);
-        return view('users.index', compact('users'));
+        $query = User::with(['department', 'designation'])->latest();
+
+        if ($request->filled('search')) {
+            $search = $request->string('search')->trim()->value();
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('role')) {
+            $query->where('role', $request->role);
+        }
+
+        if ($request->filled('department_id')) {
+            $query->where('department_id', $request->department_id);
+        }
+
+        $users = $query->paginate(15)->withQueryString();
+        $departments = Department::orderBy('name')->get();
+
+        return view('users.index', compact('users', 'departments'));
     }
 
     public function create()
@@ -34,9 +55,9 @@ class UserController extends Controller
             'role'           => 'required|in:admin,user', // super_admin never via UI
             'department_id'  => 'nullable|exists:departments,id',
             'designation_id' => 'nullable|exists:designations,id',
-            'contact_number' => 'nullable|string|max:20',
+            'contact_number' => ['nullable', 'regex:/^[0-9]{10}$/'],
             'photo'          => 'nullable|file|mimes:jpg,jpeg,png|max:2048',
-            'can_create_file'=> 'nullable|boolean',
+            'can_create_file' => 'nullable|boolean',
         ]);
 
         // Extra server-side guard — super_admin is system-reserved
@@ -59,7 +80,7 @@ class UserController extends Controller
             'email' => $user->email,
             'role'  => $user->role,
             'ip'    => $request->ip(),
-        ], 'Admin user created by ' . auth()->user()->name);
+        ], 'Admin user created by ' . Auth::user()->name);
 
         return redirect()->route('users.index')->with('success', 'User created successfully.');
     }
@@ -85,11 +106,13 @@ class UserController extends Controller
             'role'           => 'required|in:admin,user', // super_admin never via UI
             'department_id'  => 'nullable|exists:departments,id',
             'designation_id' => 'nullable|exists:designations,id',
-            'contact_number' => 'nullable|string|max:20',
+            'contact_number' => ['nullable', 'regex:/^[0-9]{10}$/'],
             'password'       => 'nullable|min:8|confirmed',
+            'photo'          => 'nullable|file|mimes:jpg,jpeg,png|max:2048',
+            'can_create_file' => 'nullable|boolean',
         ]);
 
-        if ($request->role === 'super_admin') {
+        if ($request->role === 'super_admin' && $user->role !== 'super_admin') {
             abort(403, 'Super Admin role cannot be assigned via the web interface.');
         }
 
@@ -101,6 +124,13 @@ class UserController extends Controller
             $data['password'] = Hash::make($request->password);
         }
 
+        if ($request->hasFile('photo')) {
+            if ($user->photo && Storage::disk('public')->exists($user->photo)) {
+                Storage::disk('public')->delete($user->photo);
+            }
+            $data['photo'] = $this->storePhoto($request);
+        }
+
         $user->update($data);
 
         return redirect()->route('users.index')->with('success', 'User updated successfully.');
@@ -108,7 +138,7 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
-        if ($user->id === auth()->id()) {
+        if ($user->id === Auth::id()) {
             return back()->with('error', 'You cannot delete your own account.');
         }
 
@@ -117,7 +147,7 @@ class UserController extends Controller
             'email' => $user->email,
             'role'  => $user->role,
             'ip'    => request()->ip(),
-        ], 'User deleted by ' . auth()->user()->name);
+        ], 'User deleted by ' . Auth::user()->name);
 
         $user->delete();
 

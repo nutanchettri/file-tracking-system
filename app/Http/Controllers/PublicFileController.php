@@ -79,11 +79,12 @@ class PublicFileController extends Controller
         $request->validate([
             'applicant_name' => 'required|string|max:255',
             'email'          => 'required|email:rfc|max:255',
-            'contact_number' => 'required|string|max:20',
+            'contact_number' => ['required', 'regex:/^[0-9]{10}$/'],
             'subject'        => 'required|string|max:255',
             'remarks'        => 'nullable|string|max:1000',
             'attachment'     => [
-                'required', 'file',
+                'required',
+                'file',
                 'mimes:pdf,doc,docx,jpg,jpeg,png',
                 'max:10240',
                 function ($attribute, $value, $fail) {

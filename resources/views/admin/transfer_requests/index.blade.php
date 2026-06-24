@@ -35,19 +35,28 @@
     <div class="col-4">
         <div class="stat-kpi">
             <div class="stat-kpi-icon orange"><i class="fa-solid fa-clock"></i></div>
-            <div><div class="stat-kpi-label">Pending</div><div class="stat-kpi-value">{{ $pending->count() }}</div></div>
+            <div>
+                <div class="stat-kpi-label">Pending</div>
+                <div class="stat-kpi-value">{{ $pending->count() }}</div>
+            </div>
         </div>
     </div>
     <div class="col-4">
         <div class="stat-kpi">
             <div class="stat-kpi-icon green"><i class="fa-solid fa-check"></i></div>
-            <div><div class="stat-kpi-label">Approved</div><div class="stat-kpi-value">{{ $approved->count() }}</div></div>
+            <div>
+                <div class="stat-kpi-label">Approved</div>
+                <div class="stat-kpi-value">{{ $approved->count() }}</div>
+            </div>
         </div>
     </div>
     <div class="col-4">
         <div class="stat-kpi">
             <div class="stat-kpi-icon red"><i class="fa-solid fa-xmark"></i></div>
-            <div><div class="stat-kpi-label">Rejected</div><div class="stat-kpi-value">{{ $rejected->count() }}</div></div>
+            <div>
+                <div class="stat-kpi-label">Rejected</div>
+                <div class="stat-kpi-value">{{ $rejected->count() }}</div>
+            </div>
         </div>
     </div>
 </div>
@@ -90,46 +99,46 @@
                         </tr>
                     </thead>
                     <tbody>
-                    @forelse($pending as $req)
-                    <tr id="row-{{ $req->uuid }}">
-                        <td>
-                            <div class="fw-700">{{ $req->file->file_name ?? 'N/A' }}</div>
-                            <div class="text-muted fs-sm">{{ $req->file->file_number ?? '' }}</div>
-                        </td>
-                        <td>{{ $req->sender->name ?? 'N/A' }}</td>
-                        <td class="text-muted">{{ $req->fromDept->name ?? 'N/A' }}</td>
-                        <td class="text-muted">{{ $req->toDept->name ?? 'N/A' }}</td>
-                        <td>{{ $req->receiver->name ?? 'N/A' }}</td>
-                        <td class="text-muted fs-sm">{{ $req->created_at->format('d M Y') }}</td>
-                        @if(!$isSuper)
-                        <td>
-                            <div class="d-flex gap-1">
-                                <button onclick="handleRequest('{{ $req->uuid }}', 'approve')"
-                                    class="btn btn-sm btn-success">
-                                    <i class="fa-solid fa-check me-1"></i>Approve
-                                </button>
-                                <button onclick="handleRequest('{{ $req->uuid }}', 'reject')"
-                                    class="btn btn-sm btn-danger">
-                                    <i class="fa-solid fa-xmark me-1"></i>Reject
-                                </button>
-                            </div>
-                        </td>
-                        @else
-                        <td>
-                            <span class="badge-status badge-pending"
-                                title="Approval by {{ $req->fromDept->name ?? '' }} Admin (source department)">
-                                <i class="fa-solid fa-lock me-1"></i>{{ $req->fromDept->name ?? 'N/A' }} Admin
-                            </span>
-                        </td>
-                        @endif
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="7">
-                            <div class="empty-state"><i class="fa-solid fa-clock"></i>No pending requests.</div>
-                        </td>
-                    </tr>
-                    @endforelse
+                        @forelse($pending as $req)
+                        <tr id="row-{{ $req->uuid }}">
+                            <td>
+                                <div class="fw-700">{{ $req->file->file_name ?? 'N/A' }}</div>
+                                <div class="text-muted fs-sm">{{ $req->file->file_number ?? '' }}</div>
+                            </td>
+                            <td>{{ $req->sender->name ?? 'N/A' }}</td>
+                            <td class="text-muted">{{ $req->fromDept->name ?? 'N/A' }}</td>
+                            <td class="text-muted">{{ $req->toDept->name ?? 'N/A' }}</td>
+                            <td>{{ $req->receiver->name ?? 'N/A' }}</td>
+                            <td class="text-muted fs-sm">{{ $req->created_at->format('d M Y') }}</td>
+                            @if(!$isSuper)
+                            <td>
+                                <div class="d-flex gap-1">
+                                    <button onclick="handleRequest('{{ $req->uuid }}', 'approve', this)"
+                                        class="btn btn-sm btn-success">
+                                        <i class="fa-solid fa-check me-1"></i>Approve
+                                    </button>
+                                    <button onclick="handleRequest('{{ $req->uuid }}', 'reject', this)"
+                                        class="btn btn-sm btn-danger">
+                                        <i class="fa-solid fa-xmark me-1"></i>Reject
+                                    </button>
+                                </div>
+                            </td>
+                            @else
+                            <td>
+                                <span class="badge-status badge-pending"
+                                    title="Approval by {{ $req->fromDept->name ?? '' }} Admin (source department)">
+                                    <i class="fa-solid fa-lock me-1"></i>{{ $req->fromDept->name ?? 'N/A' }} Admin
+                                </span>
+                            </td>
+                            @endif
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="7">
+                                <div class="empty-state"><i class="fa-solid fa-clock"></i>No pending requests.</div>
+                            </td>
+                        </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -142,25 +151,37 @@
             <div class="table-responsive">
                 <table class="portal-table">
                     <thead>
-                        <tr><th>File</th><th>From</th><th>To</th><th>From Dept.</th><th>To Dept.</th><th>Approved</th><th>Status</th></tr>
+                        <tr>
+                            <th>File</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>From Dept.</th>
+                            <th>To Dept.</th>
+                            <th>Approved</th>
+                            <th>Status</th>
+                        </tr>
                     </thead>
                     <tbody>
-                    @forelse($approved as $req)
-                    <tr>
-                        <td>
-                            <div class="fw-700">{{ $req->file->file_name ?? 'N/A' }}</div>
-                            <div class="text-muted fs-sm">{{ $req->file->file_number ?? '' }}</div>
-                        </td>
-                        <td>{{ $req->sender->name ?? 'N/A' }}</td>
-                        <td>{{ $req->receiver->name ?? 'N/A' }}</td>
-                        <td class="text-muted">{{ $req->fromDept->name ?? 'N/A' }}</td>
-                        <td class="text-muted">{{ $req->toDept->name ?? 'N/A' }}</td>
-                        <td class="text-muted fs-sm">{{ $req->updated_at->format('d M Y') }}</td>
-                        <td>@include('partials.status-badge', ['status' => 'approved'])</td>
-                    </tr>
-                    @empty
-                    <tr><td colspan="7"><div class="empty-state"><i class="fa-solid fa-check"></i>No approved requests.</div></td></tr>
-                    @endforelse
+                        @forelse($approved as $req)
+                        <tr>
+                            <td>
+                                <div class="fw-700">{{ $req->file->file_name ?? 'N/A' }}</div>
+                                <div class="text-muted fs-sm">{{ $req->file->file_number ?? '' }}</div>
+                            </td>
+                            <td>{{ $req->sender->name ?? 'N/A' }}</td>
+                            <td>{{ $req->receiver->name ?? 'N/A' }}</td>
+                            <td class="text-muted">{{ $req->fromDept->name ?? 'N/A' }}</td>
+                            <td class="text-muted">{{ $req->toDept->name ?? 'N/A' }}</td>
+                            <td class="text-muted fs-sm">{{ $req->updated_at->format('d M Y') }}</td>
+                            <td>@include('partials.status-badge', ['status' => 'approved'])</td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="7">
+                                <div class="empty-state"><i class="fa-solid fa-check"></i>No approved requests.</div>
+                            </td>
+                        </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -173,25 +194,37 @@
             <div class="table-responsive">
                 <table class="portal-table">
                     <thead>
-                        <tr><th>File</th><th>From</th><th>To</th><th>From Dept.</th><th>To Dept.</th><th>Rejected</th><th>Status</th></tr>
+                        <tr>
+                            <th>File</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>From Dept.</th>
+                            <th>To Dept.</th>
+                            <th>Rejected</th>
+                            <th>Status</th>
+                        </tr>
                     </thead>
                     <tbody>
-                    @forelse($rejected as $req)
-                    <tr>
-                        <td>
-                            <div class="fw-700">{{ $req->file->file_name ?? 'N/A' }}</div>
-                            <div class="text-muted fs-sm">{{ $req->file->file_number ?? '' }}</div>
-                        </td>
-                        <td>{{ $req->sender->name ?? 'N/A' }}</td>
-                        <td>{{ $req->receiver->name ?? 'N/A' }}</td>
-                        <td class="text-muted">{{ $req->fromDept->name ?? 'N/A' }}</td>
-                        <td class="text-muted">{{ $req->toDept->name ?? 'N/A' }}</td>
-                        <td class="text-muted fs-sm">{{ $req->updated_at->format('d M Y') }}</td>
-                        <td>@include('partials.status-badge', ['status' => 'rejected'])</td>
-                    </tr>
-                    @empty
-                    <tr><td colspan="7"><div class="empty-state"><i class="fa-solid fa-xmark"></i>No rejected requests.</div></td></tr>
-                    @endforelse
+                        @forelse($rejected as $req)
+                        <tr>
+                            <td>
+                                <div class="fw-700">{{ $req->file->file_name ?? 'N/A' }}</div>
+                                <div class="text-muted fs-sm">{{ $req->file->file_number ?? '' }}</div>
+                            </td>
+                            <td>{{ $req->sender->name ?? 'N/A' }}</td>
+                            <td>{{ $req->receiver->name ?? 'N/A' }}</td>
+                            <td class="text-muted">{{ $req->fromDept->name ?? 'N/A' }}</td>
+                            <td class="text-muted">{{ $req->toDept->name ?? 'N/A' }}</td>
+                            <td class="text-muted fs-sm">{{ $req->updated_at->format('d M Y') }}</td>
+                            <td>@include('partials.status-badge', ['status' => 'rejected'])</td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="7">
+                                <div class="empty-state"><i class="fa-solid fa-xmark"></i>No rejected requests.</div>
+                            </td>
+                        </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -204,52 +237,71 @@
 
 @push('scripts')
 <script>
-function handleRequest(uuid, action) {
-    if (!confirm((action === 'approve' ? 'Approve' : 'Reject') + ' this transfer request?')) return;
-    var btn = event.target.closest('button');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; }
-
-    fetch('/admin/transfer-requests/' + uuid + '/' + action, {
-        method: 'POST',
-        headers: {
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify({})
-    })
-    .then(function(r) {
-        return r.json().then(function(data) {
-            return { ok: r.ok, status: r.status, data: data };
-        });
-    })
-    .then(function(res) {
-        var fb = document.getElementById('requestFeedback');
-        if (res.data.success) {
-            var row = document.getElementById('row-' + uuid);
-            if (row) row.remove();
-            fb.className = 'alert alert-success mt-3';
-            fb.textContent = res.data.message;
-            var sound = document.getElementById('notif-sound');
-            if (sound) { sound.currentTime = 0; sound.play().catch(function(){}); }
-            // Refresh stats after 500ms
-            setTimeout(function() {
-                var labels = document.querySelectorAll('.stat-kpi-value');
-                // Reload page after 2s to refresh KPI counts
-            }, 500);
-        } else {
-            fb.className = 'alert alert-danger mt-3';
-            fb.textContent = res.data.message || 'Action failed. Please try again.';
-            if (btn) { btn.disabled = false; btn.innerHTML = btn.dataset.orig || btn.innerHTML; }
+    function handleRequest(uuid, action, btn) {
+        if (!confirm((action === 'approve' ? 'Approve' : 'Reject') + ' this transfer request?')) return;
+        var originalHtml = btn ? btn.innerHTML : null;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         }
-        fb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        setTimeout(function() { fb.className = 'alert d-none'; }, 5000);
-    })
-    .catch(function() {
-        alert('A network error occurred. Please refresh and try again.');
-        if (btn) btn.disabled = false;
-    });
-}
+
+        fetch('/admin/transfer-requests/' + uuid + '/' + action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({})
+            })
+            .then(function(r) {
+                return r.json().then(function(data) {
+                    return {
+                        ok: r.ok,
+                        status: r.status,
+                        data: data
+                    };
+                });
+            })
+            .then(function(res) {
+                var fb = document.getElementById('requestFeedback');
+                if (res.data.success) {
+                    var row = document.getElementById('row-' + uuid);
+                    if (row) row.remove();
+                    fb.className = 'alert alert-success mt-3';
+                    fb.textContent = res.data.message;
+                    var sound = document.getElementById('notif-sound');
+                    if (sound) {
+                        sound.currentTime = 0;
+                        sound.play().catch(function() {});
+                    }
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    fb.className = 'alert alert-danger mt-3';
+                    fb.textContent = res.data.message || 'Action failed. Please try again.';
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtml;
+                    }
+                }
+                fb.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest'
+                });
+                setTimeout(function() {
+                    fb.className = 'alert d-none';
+                }, 5000);
+            })
+            .catch(function() {
+                alert('A network error occurred. Please refresh and try again.');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                }
+            });
+    }
 </script>
 @endpush
 @endsection

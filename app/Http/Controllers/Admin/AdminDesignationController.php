@@ -67,7 +67,6 @@ class AdminDesignationController extends Controller
             'department_id' => $isSuper ? 'required|exists:departments,id' : 'nullable',
         ]);
 
-        // Determine department
         $departmentId = $isSuper
             ? (int) $request->department_id
             : $user->department_id;
@@ -89,19 +88,17 @@ class AdminDesignationController extends Controller
 
             return redirect()->route('admin.designations.index')
                 ->with('success', 'Designation created successfully.');
-
         } catch (\Throwable $e) {
-            Log::error('Designation creation failed: ' . $e->getMessage(), [
+            Log::error('Designation creation failed', [
                 'user_id'       => auth()->id(),
                 'department_id' => $departmentId,
                 'name'          => $request->name,
-                'file'          => $e->getFile(),
-                'line'          => $e->getLine(),
+                'error'         => $e->getMessage(),
             ]);
 
             return back()
                 ->withInput()
-                ->with('error', 'Failed to create designation: ' . $e->getMessage());
+                ->with('error', 'Failed to create designation. Please verify the input and try again.');
         }
     }
 
@@ -150,7 +147,6 @@ class AdminDesignationController extends Controller
 
             return redirect()->route('admin.designations.index')
                 ->with('success', 'Designation updated successfully.');
-
         } catch (\Throwable $e) {
             Log::error('Designation update failed: ' . $e->getMessage());
             return back()->withInput()->with('error', 'Update failed: ' . $e->getMessage());
