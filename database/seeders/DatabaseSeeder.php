@@ -4,11 +4,13 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 
+/**
+ * Clean seeder — creates ONLY the Super Admin account.
+ * No sample departments, designations, users, files or movements.
+ * Run: php artisan db:seed
+ */
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $this->command->info('=== Super Admin Seeder ===');
