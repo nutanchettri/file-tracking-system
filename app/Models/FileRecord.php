@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\DashboardService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -12,6 +13,7 @@ class FileRecord extends Model
     protected $fillable = [
         'uuid',
         'department_id',
+        'current_department_id',
         'file_name',
         'file_number',
         'remarks',
@@ -32,8 +34,8 @@ class FileRecord extends Model
             }
         });
         // Invalidate dashboard caches after writes
-        static::created(fn()  => \App\Services\DashboardService::clearSuperAdminCache());
-        static::deleted(fn()  => \App\Services\DashboardService::clearSuperAdminCache());
+        static::created(fn () => DashboardService::clearSuperAdminCache());
+        static::deleted(fn () => DashboardService::clearSuperAdminCache());
     }
 
     public function getRouteKeyName(): string
@@ -60,6 +62,16 @@ class FileRecord extends Model
     public function department()
     {
         return $this->belongsTo(Department::class, 'department_id');
+    }
+
+    /**
+     * The department that currently holds this file.
+     * Set on creation, updated on every cross-department transfer.
+     * When current_user_id is NULL, this department is responsible for assignment.
+     */
+    public function currentDepartment()
+    {
+        return $this->belongsTo(Department::class, 'current_department_id');
     }
 
     public function movements()
